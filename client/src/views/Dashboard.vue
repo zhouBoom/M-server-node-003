@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="dashboard-content">
-      <ElRow :gutter="[20, 20]">
+      <ElRow :gutter="20">
         <ElCol :xs="24" :sm="12" :md="8" v-for="project in projects" :key="project.id">
           <ElCard class="project-card" @click="enterProject(project.id)">
             <div class="project-icon">

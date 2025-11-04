@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { ElCard, ElButton, ElIcon, ElInput, List, ListItem, ElAvatar } from 'element-plus';
-import { ArrowLeft, PaperPlane, Document, Brush, ChatDotRound, User, Calendar, Warning, Check, Close } from '@element-plus/icons-vue';
+import { ElCard, ElButton, ElIcon, ElInput, ElAvatar } from 'element-plus';
+import { ChatDotRound, Document, Brush } from '@element-plus/icons-vue';
 import type { Project, WebSocketMessage } from '../types/project';
 import wsClient from '../utils/websocket';
 import { useRoute, useRouter } from 'vue-router';
@@ -33,24 +33,6 @@ const fetchProjectDetail = async () => {
   }
 };
 
-// 返回仪表盘
-const goBack = () => {
-  router.push('/dashboard');
-};
-
-// 发送消息
-const sendMessage = () => {
-  if (!messageInput.value.trim() || !wsClient.isConnected()) return;
-
-  wsClient.send({
-    type: 'chat-message',
-    content: messageInput.value.trim(),
-    projectId: projectId.value,
-  });
-
-  messageInput.value = '';
-};
-
 // 处理 WebSocket 消息
 const handleWebSocketMessage = (data: WebSocketMessage) => {
   console.log('Received WebSocket message:', data);
@@ -70,20 +52,6 @@ const handleWebSocketMessage = (data: WebSocketMessage) => {
   // 处理欢迎消息，保存当前用户 ID
   if (data.type === 'welcome') {
     currentUser.value = data.clientId;
-  }
-};
-
-// 获取项目类型对应的图标
-const getProjectIcon = (type: string) => {
-  switch (type) {
-    case 'text':
-      return Document;
-    case 'board':
-      return Brush;
-    case 'vote':
-      return ChatDotRound;
-    default:
-      return Document;
   }
 };
 
@@ -183,8 +151,8 @@ onBeforeUnmount(() => {
         </template>
 
         <div class="chat-content">
-          <List class="message-list" v-if="messages.length > 0">
-            <ListItem v-for="(msg, index) in messages" :key="index">
+          <div class="message-list" v-if="messages.length > 0">
+            <div v-for="(msg, index) in messages" :key="index" class="message-item-wrapper">
               <template #default>
                 <div class="message-item" :class="{ 'own-message': msg.from === currentUser }">
                   <ElAvatar :size="32" class="user-avatar">
@@ -198,9 +166,9 @@ onBeforeUnmount(() => {
                     <div class="message-text">{{ msg.content }}</div>
                   </div>
                 </div>
-              </template>
-            </ElListItem>
-          </ElList>
+              </div>
+            </div>
+          </div>
 
           <div v-else class="no-messages">
             <ElIcon :size="32" color="#909399">
@@ -218,7 +186,7 @@ onBeforeUnmount(() => {
             clearable
           >
             <template #append>
-              <ElButton @click="sendMessage" type="primary" :icon="PaperPlane" />
+              <ElButton @click="sendMessage" type="primary" :icon="ChatDotRound" />
             </template>
           </ElInput>
         </div>
