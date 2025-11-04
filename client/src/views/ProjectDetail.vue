@@ -1,19 +1,49 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { ElCard, ElButton, ElIcon } from 'element-plus';
-import { Document, Brush, ChatDotRound } from '@element-plus/icons-vue';
+import { ElCard, ElButton, ElIcon, ElMessage } from 'element-plus';
+import { Document, Brush, ChatDotRound, Delete } from '@element-plus/icons-vue';
 import type { Project } from '../types/project';
 import { useRoute } from 'vue-router';
 import wsClient from '../utils/websocket';
+
+// 定义投票选项类型
+interface VoteOption {
+  text: string;
+  count: number;
+}
+
+// 定义投票类型
+interface Vote {
+  projectId: string;
+  topic: string;
+  options: VoteOption[];
+  users: string[];
+}
 
 const route = useRoute();
 const project = ref<Project | null>(null);
 const loading = ref(true);
 
+// 投票相关变量
+const activeTab = ref('create');
+const newVote = ref({
+  topic: '',
+  options: ['', '']
+});
+const currentVote = ref<Vote | null>(null);
+const hasVoted = ref(false);
+const votedOptionIndex = ref(-1);
+
 // 获取项目 ID
 const projectId = computed(() => route.params.id as string);
 // WebSocket 连接状态
 const isWsConnected = computed(() => wsClient.isConnected());
+
+// 计算属性：总票数
+const totalVotes = computed(() => {
+  if (!currentVote.value) return 0;
+  return currentVote.value.options.reduce((sum, option) => sum + option.count, 0);
+});
 
 // 获取项目详情
 const fetchProjectDetail = async () => {
@@ -24,11 +54,151 @@ const fetchProjectDetail = async () => {
       throw new Error('Failed to fetch project detail');
     }
     project.value = await response.json();
+    
+    // 如果是投票类型项目，获取投票信息
+    if (project.value && project.value.type === 'vote') {
+      fetchVoteInfo(projectId.value);
+    }
   } catch (error) {
     console.error('Error fetching project detail:', error);
   } finally {
     loading.value = false;
   }
+};
+
+// 获取投票信息
+const fetchVoteInfo = async (projectId: string) => {
+  try {
+    const response = await fetch(`http://localhost:3000/api/votes/${projectId}`);
+    if (response.ok) {
+      const data = await response.json();
+      currentVote.value = data;
+
+      // 检查用户是否已经投票
+      const clientId = localStorage.getItem('clientId');
+      if (clientId && currentVote.value && currentVote.value.users.includes(clientId)) {
+        hasVoted.value = true;
+      }
+    } else if (response.status !== 404) {
+      ElMessage.error('获取投票信息失败');
+    }
+  } catch (error) {
+    console.error('Error fetching vote info:', error);
+    ElMessage.error('获取投票信息失败');
+  }
+};
+
+// 添加投票选项
+const addOption = () => {
+  newVote.value.options.push('');
+};
+
+// 移除投票选项
+const removeOption = (index: number) => {
+  if (newVote.value.options.length > 2) {
+    newVote.value.options.splice(index, 1);
+  } else {
+    ElMessage.warning('至少需要两个选项');
+  }
+};
+
+// 发起投票
+const createVote = async () => {
+  if (!project.value || project.value.type !== 'vote') return;
+
+  // 验证投票主题和选项
+  if (!newVote.value.topic.trim()) {
+    ElMessage.warning('请输入投票主题');
+    return;
+  }
+
+  const validOptions = newVote.value.options.filter(option => option.trim() !== '');
+  if (validOptions.length < 2) {
+    ElMessage.warning('请至少输入两个有效选项');
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:3000/api/votes/${project.value?.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        topic: newVote.value.topic.trim(),
+        options: validOptions.map(option => option.trim())
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      currentVote.value = data;
+      activeTab.value = 'results';
+      newVote.value = {
+        topic: '',
+        options: ['', '']
+      };
+      ElMessage.success('投票创建成功');
+    } else {
+      const errorData = await response.json();
+      ElMessage.error(errorData.error || '创建投票失败');
+    }
+  } catch (error) {
+    console.error('Error creating vote:', error);
+    ElMessage.error('创建投票失败');
+  }
+};
+
+// 提交投票
+const submitVote = async (optionIndex: number) => {
+  if (!project.value || project.value.type !== 'vote' || !currentVote.value) return;
+
+  // 获取客户端 ID
+  let clientId = localStorage.getItem('clientId');
+  if (!clientId) {
+    // 生成随机客户端 ID
+    clientId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('clientId', clientId);
+  }
+
+  try {
+    const response = await fetch(`http://localhost:3000/api/votes/${project.value?.id}/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        clientId,
+        optionIndex
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      currentVote.value = data;
+      hasVoted.value = true;
+      votedOptionIndex.value = optionIndex;
+      ElMessage.success('投票提交成功');
+    } else {
+      const errorData = await response.json();
+      ElMessage.error(errorData.error || '提交投票失败');
+    }
+  } catch (error) {
+    console.error('Error submitting vote:', error);
+    ElMessage.error('提交投票失败');
+  }
+};
+
+// 计算投票选项百分比
+const calculatePercentage = (count: number) => {
+  if (totalVotes.value === 0) return 0;
+  return Math.round((count / totalVotes.value) * 100);
+};
+
+// 获取进度条颜色
+const getProgressColor = (index: number) => {
+  const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399'];
+  return colors[index % colors.length];
 };
 
 onMounted(() => {
@@ -49,9 +219,9 @@ onBeforeUnmount(() => {
   <div class="project-detail-container">
     <div class="project-detail-header">
       <div class="project-info">
-        <ElIcon :size="32" class="project-type-icon">
-          <component :is="project?.type === 'text' ? Document : project?.type === 'board' ? Brush : ChatDotRound" />
-        </ElIcon>
+        <el-icon :size="32" class="project-type-icon">
+          <component :is="project && project.type === 'text' ? Document : project && project.type === 'board' ? Brush : ChatDotRound" />
+        </el-icon>
         <div class="project-title">
           <h1>{{ project?.name }}</h1>
           <span class="project-type-tag">
@@ -62,13 +232,13 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="project-detail-content">
-      <ElCard class="collaboration-area">
+      <el-card class="collaboration-area">
         <template #header>
           <div class="card-header">
             <span>实时协作区</span>
-            <ElButton type="success" size="small" :disabled="!isWsConnected.value">
-              {{ isWsConnected.value ? '已连接' : '未连接' }}
-            </ElButton>
+            <el-button type="success" size="small" :disabled="!isWsConnected">
+              {{ isWsConnected ? '已连接' : '未连接' }}
+            </el-button>
           </div>
         </template>
 
@@ -91,19 +261,82 @@ onBeforeUnmount(() => {
             </div>
 
             <div v-else-if="project.type === 'vote'" class="vote-system">
-              <h3>投票系统（开发中）</h3>
-              <p>这是一个多人实时投票系统，支持创建和参与投票。</p>
+              <!-- 投票功能 -->
+              <el-tabs v-model="activeTab">
+                <!-- 投票发起标签 -->
+                <el-tab-pane label="发起投票" name="create">
+                  <el-form :model="newVote" label-position="top">
+                    <el-form-item label="投票主题">
+                      <el-input v-model="newVote.topic" placeholder="请输入投票主题" />
+                    </el-form-item>
+                    <el-form-item label="投票选项">
+                      <div v-for="(_, index) in newVote.options" :key="index" class="option-item">
+                        <el-input v-model="newVote.options[index]" placeholder="请输入选项内容" />
+                        <el-button type="danger" size="small" @click="removeOption(index)">
+                          <el-icon><Delete /></el-icon>
+                        </el-button>
+                      </div>
+                      <el-button type="primary" size="small" @click="addOption">添加选项</el-button>
+                    </el-form-item>
+                    <el-form-item>
+                      <el-button type="primary" @click="createVote">发起投票</el-button>
+                    </el-form-item>
+                  </el-form>
+                </el-tab-pane>
+
+                <!-- 投票结果标签 -->
+                <el-tab-pane label="投票结果" name="results" :disabled="!currentVote">
+                  <div v-if="currentVote" class="vote-results">
+                    <h3>{{ currentVote.topic }}</h3>
+                    <div v-for="(option, index) in currentVote.options" :key="index" class="vote-option">
+                      <div class="option-text">{{ option.text }}</div>
+                      <div class="option-bar-container">
+                        <el-progress
+                          :percentage="calculatePercentage(option.count)"
+                          :color="getProgressColor(index)"
+                          :stroke-width="20"
+                          :show-text="false"
+                        />
+                        <span class="vote-count">{{ option.count }} 票</span>
+                      </div>
+                      <el-button
+                        v-if="!hasVoted"
+                        type="primary"
+                        size="small"
+                        @click="submitVote(index)"
+                      >
+                        投票
+                      </el-button>
+                      <el-button
+                        v-else-if="votedOptionIndex === index"
+                        type="success"
+                        size="small"
+                        disabled
+                      >
+                        已投票
+                      </el-button>
+                    </div>
+                    <div class="vote-summary">
+                      <p>总票数: {{ totalVotes }}</p>
+                      <p>参与人数: {{ currentVote.users.length }}</p>
+                    </div>
+                  </div>
+                  <div v-else class="no-vote">
+                    <p>暂无投票，请先发起投票</p>
+                  </div>
+                </el-tab-pane>
+              </el-tabs>
             </div>
           </div>
 
           <div v-else class="error-state">
-            <ElIcon :size="48" color="#f56c6c">
+            <el-icon :size="48" color="#f56c6c">
               <ChatDotRound />
-            </ElIcon>
+            </el-icon>
             <p>项目不存在或已删除</p>
           </div>
         </div>
-      </ElCard>
+      </el-card>
     </div>
   </div>
 </template>

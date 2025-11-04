@@ -2,6 +2,8 @@ import express from 'express';
 import http from 'http';
 import WebSocket from 'ws';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 const server = http.createServer(app);
@@ -17,6 +19,126 @@ const projects = [
   { id: '2', name: '项目 B', type: 'board', members: 5, lastUpdate: '2024-01-02' },
   { id: '3', name: '项目 C', type: 'vote', members: 2, lastUpdate: '2024-01-03' },
 ];
+
+// 投票数据文件路径
+const votesFilePath = path.join(__dirname, '../data/votes.json');
+
+// 加载投票数据
+const loadVotes = (): any[] => {
+  try {
+    const data = fs.readFileSync(votesFilePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error loading votes:', error);
+    return [];
+  }
+};
+
+// 保存投票数据
+const saveVotes = (votes: any[]): void => {
+  try {
+    fs.writeFileSync(votesFilePath, JSON.stringify(votes, null, 2), 'utf8');
+  } catch (error) {
+    console.error('Error saving votes:', error);
+  }
+};
+
+// 初始化投票数据
+let votes = loadVotes();
+
+// API 路由：获取投票
+app.get('/api/votes/:projectId', (req, res) => {
+  const projectId = req.params.projectId;
+  const projectVote = votes.find((vote: any) => vote.projectId === projectId);
+  if (projectVote) {
+    res.json(projectVote);
+  } else {
+    res.status(404).json({ error: 'Vote not found' });
+  }
+});
+
+// API 路由：创建投票
+app.post('/api/votes/:projectId', (req, res) => {
+  const projectId = req.params.projectId;
+  const { topic, options } = req.body;
+
+  // 检查项目是否存在
+  const project = projects.find(p => p.id === projectId);
+  if (!project) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+
+  // 检查是否已经存在投票
+  const existingVote = votes.find((vote: any) => vote.projectId === projectId);
+  if (existingVote) {
+    return res.status(400).json({ error: 'Vote already exists for this project' });
+  }
+
+  // 创建新投票
+  const newVote = {
+    projectId,
+    topic,
+    options: options.map((option: string) => ({ text: option, count: 0 })),
+    users: []
+  };
+
+  // 保存投票数据
+  votes.push(newVote);
+  saveVotes(votes);
+
+  // 广播新投票
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'vote-created',
+        data: newVote
+      }));
+    }
+  });
+
+  res.status(201).json(newVote);
+});
+
+// API 路由：提交投票
+app.post('/api/votes/:projectId/submit', (req, res) => {
+  const projectId = req.params.projectId;
+  const { clientId, optionIndex } = req.body;
+
+  // 检查投票是否存在
+  const projectVote = votes.find((vote: any) => vote.projectId === projectId);
+  if (!projectVote) {
+    return res.status(404).json({ error: 'Vote not found' });
+  }
+
+  // 检查用户是否已经投票
+  if (projectVote.users.includes(clientId)) {
+    return res.status(400).json({ error: 'You have already voted' });
+  }
+
+  // 检查选项索引是否有效
+  if (optionIndex < 0 || optionIndex >= projectVote.options.length) {
+    return res.status(400).json({ error: 'Invalid option index' });
+  }
+
+  // 更新投票结果
+  projectVote.options[optionIndex].count++;
+  projectVote.users.push(clientId);
+
+  // 保存投票数据
+  saveVotes(votes);
+
+  // 广播投票结果更新
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'vote-updated',
+        data: projectVote
+      }));
+    }
+  });
+
+  res.status(200).json(projectVote);
+});
 
 // API 路由：获取项目列表
 app.get('/api/projects', (req, res) => {
