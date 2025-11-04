@@ -1,10 +1,10 @@
 class WebSocketClient {
   private ws: WebSocket | null = null;
   private url: string;
-  private onMessageCallback: ((data: any) => void) | null = null;
-  private onOpenCallback: (() => void) | null = null;
-  private onCloseCallback: (() => void) | null = null;
-  private onErrorCallback: ((error: Event) => void) | null = null;
+  private onMessageCallbacks: Set<(data: any) => void> = new Set();
+  private onOpenCallbacks: Set<() => void> = new Set();
+  private onCloseCallbacks: Set<() => void> = new Set();
+  private onErrorCallbacks: Set<(error: Event) => void> = new Set();
   private retryAttempts = 0;
   private maxRetries = 5;
   private retryDelay = 1000; // ms
@@ -21,17 +21,13 @@ class WebSocketClient {
       this.ws.onopen = () => {
         console.log('WebSocket connected');
         this.retryAttempts = 0;
-        if (this.onOpenCallback) {
-          this.onOpenCallback();
-        }
+        this.onOpenCallbacks.forEach(callback => callback());
       };
 
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (this.onMessageCallback) {
-            this.onMessageCallback(data);
-          }
+          this.onMessageCallbacks.forEach(callback => callback(data));
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }
@@ -39,9 +35,7 @@ class WebSocketClient {
 
       this.ws.onclose = () => {
         console.log('WebSocket disconnected');
-        if (this.onCloseCallback) {
-          this.onCloseCallback();
-        }
+        this.onCloseCallbacks.forEach(callback => callback());
 
         // 自动重连
         if (this.retryAttempts < this.maxRetries) {
@@ -55,9 +49,7 @@ class WebSocketClient {
 
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        if (this.onErrorCallback) {
-          this.onErrorCallback(error);
-        }
+        this.onErrorCallbacks.forEach(callback => callback(error));
       };
     } catch (error) {
       console.error('Error connecting to WebSocket:', error);
@@ -85,24 +77,44 @@ class WebSocketClient {
     }
   }
 
-  // 设置消息回调
+  // 添加消息回调
   onMessage(callback: (data: any) => void): void {
-    this.onMessageCallback = callback;
+    this.onMessageCallbacks.add(callback);
   }
 
-  // 设置连接打开回调
+  // 移除消息回调
+  offMessage(callback: (data: any) => void): void {
+    this.onMessageCallbacks.delete(callback);
+  }
+
+  // 添加连接打开回调
   onOpen(callback: () => void): void {
-    this.onOpenCallback = callback;
+    this.onOpenCallbacks.add(callback);
   }
 
-  // 设置连接关闭回调
+  // 移除连接打开回调
+  offOpen(callback: () => void): void {
+    this.onOpenCallbacks.delete(callback);
+  }
+
+  // 添加连接关闭回调
   onClose(callback: () => void): void {
-    this.onCloseCallback = callback;
+    this.onCloseCallbacks.add(callback);
   }
 
-  // 设置错误回调
+  // 移除连接关闭回调
+  offClose(callback: () => void): void {
+    this.onCloseCallbacks.delete(callback);
+  }
+
+  // 添加错误回调
   onError(callback: (error: Event) => void): void {
-    this.onErrorCallback = callback;
+    this.onErrorCallbacks.add(callback);
+  }
+
+  // 移除错误回调
+  offError(callback: (error: Event) => void): void {
+    this.onErrorCallbacks.delete(callback);
   }
 
   // 检查连接状态
