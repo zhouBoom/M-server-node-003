@@ -4,6 +4,22 @@ import WebSocket from 'ws';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+// 活动历史类型定义
+interface Activity {
+  id: string;
+  projectId: string;
+  userId: string;
+  userName: string;
+  actionType: string;
+  cursorPosition: number;
+  content: string;
+  timestamp: string;
+}
+
+// 活动历史存储
+const activities: Record<string, Activity[]> = {};
 
 const app = express();
 const server = http.createServer(app);
@@ -155,6 +171,23 @@ app.get('/api/projects/:id', (req, res) => {
   }
 });
 
+// 获取项目活动历史
+app.get('/api/activities/:projectId', (req, res) => {
+  const { projectId } = req.params;
+  
+  // 检查项目是否存在
+  if (!projects.find(p => p.id === projectId)) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+  
+  // 获取项目的活动历史
+  const projectActivities = activities[projectId] || [];
+  
+  // 返回活动历史，按时间倒序排列
+  res.json(projectActivities.reverse());
+});
+
 // WebSocket 连接管理
 const clients = new Map<string, WebSocket>();
 
@@ -183,6 +216,34 @@ wss.on('connection', (ws: WebSocket) => {
       
       const data = JSON.parse(message);
       console.log(`Received message from ${clientId}:`, data);
+
+      // 处理文档编辑消息，保存活动历史
+      if (data.type === 'document-edit') {
+        // 确保活动历史对象存在
+        if (!activities[data.projectId]) {
+          activities[data.projectId] = [];
+        }
+        
+        // 创建新的活动记录
+        const activity = {
+          id: uuidv4(),
+          projectId: data.projectId,
+          userId: data.userId,
+          userName: data.userName,
+          actionType: data.actionType,
+          cursorPosition: data.cursorPosition,
+          content: data.content,
+          timestamp: new Date().toISOString(),
+        };
+        
+        // 添加到活动历史
+        activities[data.projectId].push(activity);
+        
+        // 限制活动历史数量为20条
+        if (activities[data.projectId].length > 20) {
+          activities[data.projectId].shift();
+        }
+      }
 
       // 广播消息给所有客户端
       wss.clients.forEach((client) => {
