@@ -1,21 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { ElCard, ElButton, ElIcon, ElInput, ElAvatar } from 'element-plus';
-import { ChatDotRound, Document, Brush } from '@element-plus/icons-vue';
-import type { Project, WebSocketMessage } from '../types/project';
+import { ElCard, ElButton, ElIcon } from 'element-plus';
+import { Document, Brush, ChatDotRound } from '@element-plus/icons-vue';
+import type { Project } from '../types/project';
+import { useRoute } from 'vue-router';
 import wsClient from '../utils/websocket';
-import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
-const router = useRouter();
 const project = ref<Project | null>(null);
 const loading = ref(true);
-const messageInput = ref('');
-const messages = ref<WebSocketMessage[]>([]);
-const currentUser = ref<string>('');
 
 // 获取项目 ID
 const projectId = computed(() => route.params.id as string);
+// WebSocket 连接状态
+const isWsConnected = computed(() => wsClient.isConnected());
 
 // 获取项目详情
 const fetchProjectDetail = async () => {
@@ -33,32 +31,9 @@ const fetchProjectDetail = async () => {
   }
 };
 
-// 处理 WebSocket 消息
-const handleWebSocketMessage = (data: WebSocketMessage) => {
-  console.log('Received WebSocket message:', data);
-
-  // 保存聊天消息
-  if (data.type === 'chat-message' && data.projectId === projectId.value) {
-    messages.value.push(data);
-    // 滚动到底部
-    setTimeout(() => {
-      const messageContainer = document.querySelector('.message-list');
-      if (messageContainer) {
-        messageContainer.scrollTop = messageContainer.scrollHeight;
-      }
-    }, 100);
-  }
-
-  // 处理欢迎消息，保存当前用户 ID
-  if (data.type === 'welcome') {
-    currentUser.value = data.clientId;
-  }
-};
-
 onMounted(() => {
   // 初始化 WebSocket 连接
   wsClient.connect();
-  wsClient.onMessage(handleWebSocketMessage);
   
   // 获取项目详情
   fetchProjectDetail();
@@ -73,10 +48,9 @@ onBeforeUnmount(() => {
 <template>
   <div class="project-detail-container">
     <div class="project-detail-header">
-      <ElButton @click="goBack" :icon="ArrowLeft" type="default">返回</ElButton>
       <div class="project-info">
         <ElIcon :size="32" class="project-type-icon">
-          <component :is="getProjectIcon(project?.type || 'text')" />
+          <component :is="project?.type === 'text' ? Document : project?.type === 'board' ? Brush : ChatDotRound" />
         </ElIcon>
         <div class="project-title">
           <h1>{{ project?.name }}</h1>
@@ -85,16 +59,6 @@ onBeforeUnmount(() => {
           </span>
         </div>
       </div>
-      <div class="project-stats">
-        <span class="stat-item">
-          <ElIcon><User /></ElIcon>
-          {{ project?.members }} 人
-        </span>
-        <span class="stat-item">
-          <ElIcon><Calendar /></ElIcon>
-          {{ project?.lastUpdate }}
-        </span>
-      </div>
     </div>
 
     <div class="project-detail-content">
@@ -102,9 +66,8 @@ onBeforeUnmount(() => {
         <template #header>
           <div class="card-header">
             <span>实时协作区</span>
-            <ElButton type="success" size="small" :disabled="!wsClient.isConnected()">
-              <ElIcon>{{ wsClient.isConnected() ? 'Check' : 'Close' }}</ElIcon>
-              {{ wsClient.isConnected() ? '已连接' : '未连接' }}
+            <ElButton type="success" size="small" :disabled="!isWsConnected.value">
+              {{ isWsConnected.value ? '已连接' : '未连接' }}
             </ElButton>
           </div>
         </template>
@@ -135,60 +98,10 @@ onBeforeUnmount(() => {
 
           <div v-else class="error-state">
             <ElIcon :size="48" color="#f56c6c">
-              <Warning />
+              <ChatDotRound />
             </ElIcon>
             <p>项目不存在或已删除</p>
           </div>
-        </div>
-      </ElCard>
-
-      <ElCard class="chat-area">
-        <template #header>
-          <div class="card-header">
-            <span>聊天消息</span>
-            <span class="message-count">{{ messages.length }} 条</span>
-          </div>
-        </template>
-
-        <div class="chat-content">
-          <div class="message-list" v-if="messages.length > 0">
-            <div v-for="(msg, index) in messages" :key="index" class="message-item-wrapper">
-              <template #default>
-                <div class="message-item" :class="{ 'own-message': msg.from === currentUser }">
-                  <ElAvatar :size="32" class="user-avatar">
-                    {{ msg.from.substring(0, 2).toUpperCase() }}
-                  </ElAvatar>
-                  <div class="message-content">
-                    <div class="message-header">
-                      <span class="user-name">用户 {{ msg.from.substring(0, 6) }}</span>
-                      <span class="message-time">{{ new Date(msg.timestamp).toLocaleTimeString() }}</span>
-                    </div>
-                    <div class="message-text">{{ msg.content }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="no-messages">
-            <ElIcon :size="32" color="#909399">
-              <ChatDotRound />
-            </ElIcon>
-            <p>暂无消息，开始发送第一条消息吧！</p>
-          </div>
-        </div>
-
-        <div class="message-input-area">
-          <ElInput
-            v-model="messageInput"
-            placeholder="输入消息..."
-            @keyup.enter="sendMessage"
-            clearable
-          >
-            <template #append>
-              <ElButton @click="sendMessage" type="primary" :icon="ChatDotRound" />
-            </template>
-          </ElInput>
         </div>
       </ElCard>
     </div>

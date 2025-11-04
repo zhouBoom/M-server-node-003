@@ -53,17 +53,33 @@ wss.on('connection', (ws: WebSocket) => {
   // 处理客户端消息
   ws.on('message', (message: string) => {
     try {
+      // 检查消息是否为空
+      if (!message) {
+        console.log(`Received empty message from ${clientId}`);
+        return;
+      }
+      
       const data = JSON.parse(message);
       console.log(`Received message from ${clientId}:`, data);
 
       // 广播消息给所有客户端
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
-            ...data,
-            from: clientId,
-            timestamp: new Date().toISOString(),
-          }));
+          try {
+            // 检查数据是否有效
+            if (!data || typeof data !== 'object') {
+              console.log(`Invalid message data from ${clientId}:`, data);
+              return;
+            }
+            
+            client.send(JSON.stringify({
+              ...data,
+              from: clientId,
+              timestamp: new Date().toISOString(),
+            }));
+          } catch (error) {
+            console.error(`Error sending message to client:`, error);
+          }
         }
       });
     } catch (error) {
