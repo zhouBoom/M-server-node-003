@@ -1,0 +1,276 @@
+{
+  "timestamp": "2025-11-25T06:25:13.076Z",
+  "config": {
+    "serverUrl": "ws://localhost:3000",
+    "clientCount": 25,
+    "testDuration": 60000,
+    "messageInterval": 500,
+    "disconnectProbability": 0.1,
+    "reconnectProbability": 0.8,
+    "invalidDataProbability": 0.1,
+    "messageLossProbability": 0.1
+  },
+  "results": {
+    "totalMessagesSent": 0,
+    "totalMessagesReceived": 0,
+    "totalErrors": 108,
+    "totalDisconnects": 108,
+    "totalReconnects": 83,
+    "messageLossRate": null,
+    "errorRate": null,
+    "disconnectRate": 432,
+    "reconnectRate": 76.85185185185185
+  },
+  "clients": [
+    {
+      "id": 1,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 8,
+      "disconnects": 8,
+      "reconnects": 7,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 2,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 6,
+      "disconnects": 6,
+      "reconnects": 5,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 3,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 1,
+      "disconnects": 1,
+      "reconnects": 0,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 4,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 3,
+      "disconnects": 3,
+      "reconnects": 2,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 5,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 1,
+      "disconnects": 1,
+      "reconnects": 0,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 6,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 6,
+      "disconnects": 6,
+      "reconnects": 5,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 7,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 5,
+      "disconnects": 5,
+      "reconnects": 4,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 8,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 6,
+      "disconnects": 6,
+      "reconnects": 5,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 9,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 3,
+      "disconnects": 3,
+      "reconnects": 2,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 10,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 6,
+      "disconnects": 6,
+      "reconnects": 5,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 11,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 1,
+      "disconnects": 1,
+      "reconnects": 0,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 12,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 5,
+      "disconnects": 5,
+      "reconnects": 4,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 13,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 1,
+      "disconnects": 1,
+      "reconnects": 0,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 14,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 1,
+      "disconnects": 1,
+      "reconnects": 0,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 15,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 2,
+      "disconnects": 2,
+      "reconnects": 1,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 16,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 5,
+      "disconnects": 5,
+      "reconnects": 4,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 17,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 3,
+      "disconnects": 3,
+      "reconnects": 2,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 18,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 6,
+      "disconnects": 6,
+      "reconnects": 5,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 19,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 1,
+      "disconnects": 1,
+      "reconnects": 0,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 20,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 1,
+      "disconnects": 1,
+      "reconnects": 0,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 21,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 5,
+      "disconnects": 5,
+      "reconnects": 4,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 22,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 11,
+      "disconnects": 11,
+      "reconnects": 10,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 23,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 15,
+      "disconnects": 15,
+      "reconnects": 14,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 24,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 5,
+      "disconnects": 5,
+      "reconnects": 4,
+      "messageLossRate": null,
+      "errorRate": null
+    },
+    {
+      "id": 25,
+      "messagesSent": 0,
+      "messagesReceived": 0,
+      "errors": 1,
+      "disconnects": 1,
+      "reconnects": 0,
+      "messageLossRate": null,
+      "errorRate": null
+    }
+  ]
+}
